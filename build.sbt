@@ -24,7 +24,6 @@ libraryDependencies ++= Seq(
 	"com.typesafe.akka" %% "akka-cluster-sharding" % akkaVersion,
 	"com.typesafe.akka" %% "akka-discovery" % akkaVersion,
 	"com.typesafe.akka" %% "akka-distributed-data" % akkaVersion,
-	"org.postgresql" % "postgresql" % "42.2.24",
 	"com.lightbend.akka" %% "akka-persistence-jdbc" % "5.0.4",
 	"com.typesafe.akka" %% "akka-persistence-query" % akkaVersion,
 	"com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
@@ -45,5 +44,5 @@ libraryDependencies ++= Seq(
 	"com.typesafe.akka"	%%	"akka-http-spray-json"	%	akkaHttpVersion,
 	"io.spray" %% "spray-json" % sprayJsonVersion,
 	"com.spotify" % "docker-client" % "8.16.0" % Test,
-	"com.h2database" % "h2" % "1.4.200" % Test
+	"com.h2database" % "h2" % "1.4.200"
 )
