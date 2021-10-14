@@ -20,7 +20,8 @@ resolvers ++=  Seq(
 )
 
 libraryDependencies ++= Seq(
-	"com.lightbend.akka.management" %% "akka-management-cluster-bootstrap" % "1.1.1",
+	"com.typesafe.akka" %% "akka-cluster" % akkaVersion,
+  	"com.typesafe.akka" %% "akka-discovery" % akkaVersion,
 	"com.typesafe.akka" %% "akka-cluster-sharding" % akkaVersion,
 	"com.typesafe.akka" %% "akka-discovery" % akkaVersion,
 	"com.typesafe.akka" %% "akka-distributed-data" % akkaVersion,
