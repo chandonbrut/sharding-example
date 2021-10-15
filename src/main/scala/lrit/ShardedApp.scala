@@ -11,7 +11,6 @@ import com.typesafe.config.ConfigFactory
 import java.sql.DriverManager
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
-import akka.management.cluster.bootstrap.ClusterBootstrap
 import akka.management.scaladsl.AkkaManagement
 
 /**
@@ -84,41 +83,28 @@ object H2Stuff {
         stmt.execute(h2schema)
     }
 
-    def produceNode(host:String, port:Int) = {
+    def produceNode(port:Int) = {
         val nodeConf:String = s"""
-                        # akka.management.http.port = $port
-                        akka.management.http.hostname = $host
-                        akka.management.cluster.bootstrap.contact-point-discovery.discovery-method = config
-                        contact-point-discovery.required-contact-point-nr = 2
-                        akka.discovery.config.services.sharding-example {
-                                            endpoints = [
-                                                {
-                                                    host = 127.0.0.2
-                                                    port = 8558
-                                                },
-                                                {
-                                                    host = 127.0.0.3
-                                                    port = 8558
-                                                }
-                                            ]
+                akka.management.cluster.bootstrap.contact-point-discovery.discovery-method = akka-dns
+                contact-point-discovery.required-contact-point-nr = 2
+                akka.management {
+                    http {
+                        port = 8558
+                        bind-hostname = 0.0.0.0
+                    }
+                    cluster.bootstrap {
+                        contact-point-discovery {
+                            service-name = "sharding-example"
                         }
-
-                        akka.management {
-                            cluster.bootstrap {
-                                contact-point-discovery {
-                                    service-name = "sharding-example"
-                                    discovery-method = config
-                                }
-                            }
-                        }
+                    }
+                }
 
                 akka.extensions = ["akka.management.cluster.bootstrap.ClusterBootstrap"]
                 akka.actor.allow-java-serialization = true
                 akka.actor.provider=cluster
                 akka.remote.artery {
                     canonical {
-                        hostname = $host
-                        port = 2551
+                        port = $port
                     }
                 }
                 akka {
@@ -162,26 +148,16 @@ object H2Stuff {
         val configNode1 = ConfigFactory.parseString(nodeConf).resolve()
 
         val system = ActorSystem("sharding-example", configNode1.withFallback(baseConfig))
-        AkkaManagement(system).start()
-        ClusterBootstrap(system).start()
+
         system
         
     }
 }
 
-object DiscoveryApp extends App {
-    val node1 = H2Stuff.produceNode("127.0.0.2",2551)
-    Thread.sleep(2000)
-
-    val node3 = H2Stuff.produceNode("127.0.0.3",2553)
-}
-
 object ShardedApp extends App {
     H2Stuff.start
 
-    val node1 = H2Stuff.produceNode("localhost",20000)
-    Thread.sleep(4000)
-    val node2 = H2Stuff.produceNode("localhost",20001)
+    val node1 = H2Stuff.produceNode(2551)
 
     val extractEntityId: ShardRegion.ExtractEntityId = {
         case EntityEnvelope(id, payload) => (id.toString, payload)
@@ -206,46 +182,8 @@ object ShardedApp extends App {
         extractEntityId = extractEntityId,
         extractShardId = extractShardId
     )
-    val p2 = ClusterSharding(node2).start(
-        typeName = "ShardedActor",
-        entityProps = ShardedActor.props(),
-        settings = ClusterShardingSettings(node2),
-        extractEntityId = extractEntityId,
-        extractShardId = extractShardId
-    )
 
     (1 to 5).map(i => {
         p1 ! EntityEnvelope(i, RxCommand("dtA"))
-        p2 ! EntityEnvelope(i, RxCommand("dtB"))
     })
-
-    Thread.sleep(2000)
-    Await.result(node2.terminate(),Duration.Inf)
-
-    Thread.sleep(10000)
-    (1 to 5).map(i => {
-        p1 ! EntityEnvelope(i, RxCommand("dtC"))
-    })
-
-    Thread.sleep(500)
-    val node2Reborn = H2Stuff.produceNode("localhost",20003)
-    Thread.sleep(10000)
-    
-    val p2Reborn = ClusterSharding(node2Reborn).start(
-        typeName = "ShardedActor",
-        entityProps = ShardedActor.props(),
-        settings = ClusterShardingSettings(node2Reborn),
-        extractEntityId = extractEntityId,
-        extractShardId = extractShardId
-    )    
-
-    (1 to 5).map(i => {
-        p2Reborn ! EntityEnvelope(i, RxCommand("dtD"))
-    })
-
-    Thread.sleep(2000)
-
-    Await.result(node1.terminate(), Duration.Inf)
-    Await.result(node2Reborn.terminate(), Duration.Inf)
-
 }

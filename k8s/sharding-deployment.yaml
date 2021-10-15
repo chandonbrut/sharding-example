@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: sharding-example
+  name: sharding-example
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: sharding-example
+  template:
+    metadata:
+      labels:
+        app: sharding-example
+        actorSystemName: sharding-example
+    spec:
+      containers:
+      - name: sharding-example
+        image: sharding-example:1.0
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: management
+        livenessProbe:
+          httpGet:
+            path: /alive
+            port: management
+        ports:
+        - name: remoting
+          containerPort: 2551
+          protocol: TCP
+        - name: management
+          containerPort: 8558
+          protocol: TCP
+        - name: http
+          containerPort: 8080
+          protocol: TCP
