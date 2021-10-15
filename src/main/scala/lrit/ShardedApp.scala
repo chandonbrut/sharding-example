@@ -12,6 +12,11 @@ import java.sql.DriverManager
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import akka.management.scaladsl.AkkaManagement
+import akka.cluster.singleton.ClusterSingletonManager
+import akka.actor.Props
+import akka.cluster.singleton.ClusterSingletonManagerSettings
+import akka.cluster.singleton.ClusterSingletonProxySettings
+import akka.cluster.singleton.ClusterSingletonProxy
 
 /**
   * A setting is provided, akka.management.cluster.bootstrap.new-cluster-enabled that can be disable new cluster formation to only allow the node to join existing clusters.
@@ -186,4 +191,30 @@ object ShardedApp extends App {
     (1 to 5).map(i => {
         p1 ! EntityEnvelope(i, RxCommand("dtA"))
     })
+
+    node1.actorOf(
+        ClusterSingletonManager.props(
+            Props[Counter](),
+            Stop,
+            ClusterSingletonManagerSettings(node1)
+        ),
+        "counter"
+    )
+
+    val counter = node1.actorOf(
+        ClusterSingletonProxy.props(
+            "/user/counter",
+            ClusterSingletonProxySettings(node1)
+        ),
+        "counterProxy"
+    )
+
+    import scala.concurrent.duration._
+    implicit val executionContext = node1.dispatcher
+    node1.scheduler.scheduleAtFixedRate(10 seconds, 10 seconds) {
+        new Runnable() { 
+            def run() = counter ! Counter.Add(1)
+        }
+    }
+
 }
