@@ -7,6 +7,7 @@ val akkaVersion = "2.6.16"
 val slickVersion = "3.3.3"
 val akkaHttpVersion = "10.2.6"
 val sprayJsonVersion = "1.3.6"
+val akkaManagementVersion = "1.1.1"
 
 Global / concurrentRestrictions += Tags.limit(Tags.Test, 1)
 Test / fork := false
@@ -20,11 +21,13 @@ resolvers ++=  Seq(
 )
 
 libraryDependencies ++= Seq(
-	"com.lightbend.akka.management" %% "akka-management-cluster-bootstrap" % "1.1.1",
+	"com.typesafe.akka" %% "akka-cluster" % akkaVersion,
+  	"com.typesafe.akka" %% "akka-discovery" % akkaVersion,
+	"com.lightbend.akka.management" %% "akka-management-cluster-http" % akkaManagementVersion,
 	"com.typesafe.akka" %% "akka-cluster-sharding" % akkaVersion,
+	"com.lightbend.akka.management" %% "akka-management-cluster-bootstrap" % akkaManagementVersion,
 	"com.typesafe.akka" %% "akka-discovery" % akkaVersion,
 	"com.typesafe.akka" %% "akka-distributed-data" % akkaVersion,
-	"org.postgresql" % "postgresql" % "42.2.24",
 	"com.lightbend.akka" %% "akka-persistence-jdbc" % "5.0.4",
 	"com.typesafe.akka" %% "akka-persistence-query" % akkaVersion,
 	"com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
@@ -45,5 +48,14 @@ libraryDependencies ++= Seq(
 	"com.typesafe.akka"	%%	"akka-http-spray-json"	%	akkaHttpVersion,
 	"io.spray" %% "spray-json" % sprayJsonVersion,
 	"com.spotify" % "docker-client" % "8.16.0" % Test,
-	"com.h2database" % "h2" % "1.4.200" % Test
+	"com.h2database" % "h2" % "1.4.200"
 )
+
+
+enablePlugins(JavaAppPackaging, DockerPlugin)
+
+dockerExposedPorts := Seq(8080, 8558, 2551)
+dockerUpdateLatest := true
+dockerUsername := sys.props.get("docker.username")
+dockerRepository := sys.props.get("docker.registry")
+dockerBaseImage := "openjdk:11"
